@@ -1,0 +1,393 @@
+/**
+ * Checkout CSS Styles - Blocksy Theme Compatible
+ * File: assets/css/checkout.css
+ */
+
+/* Home Delivery Wrapper - Blocksy Compatible */
+.home-delivery-wrapper {
+    margin: 30px 0;
+    padding: 25px 0;
+    border-top: 1px solid var(--border-color, #e0e0e0);
+}
+
+/* Blocksy form compatibility */
+.blocksy-woo-checkout .home-delivery-wrapper {
+    margin: var(--form-field-spacing, 30px) 0;
+}
+
+.home-delivery-wrapper h3 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    color: var(--heading-color, #333);
+    font-size: var(--h5-font-size, 1.2em);
+    font-weight: var(--heading-font-weight, 600);
+    font-family: var(--heading-font-family, inherit);
+}
+
+/* Postcode Checker */
+#postcode_checker {
+    margin-bottom: 20px;
+}
+
+#delivery_postcode {
+    display: inline-block;
+    width: 150px;
+    margin-right: 10px;
+}
+
+#check_postcode {
+    display: inline-block;
+    vertical-align: top;
+    margin-top: 0;
+}
+
+/* Messages - Blocksy Variables */
+.delivery-message {
+    margin-bottom: 15px;
+}
+
+#delivery_availability_message {
+    margin-top: 10px;
+}
+
+.wchd-error,
+.wchd-success,
+.wchd-info {
+    padding: 15px 20px;
+    margin: 15px 0;
+    border-radius: var(--border-radius, 3px);
+    font-size: var(--base-font-size, 14px);
+    line-height: 1.6;
+}
+
+.wchd-error {
+    background: var(--woo-error-bg, #fee);
+    border: 1px solid var(--woo-error-border, #fcc);
+    color: var(--woo-error-color, #c00);
+}
+
+.wchd-success {
+    background: var(--woo-success-bg, #efe);
+    border: 1px solid var(--woo-success-border, #cfc);
+    color: var(--woo-success-color, #060);
+}
+
+.wchd-info {
+    background: var(--woo-info-bg, #e6f4ff);
+    border: 1px solid var(--woo-info-border, #b3d9ff);
+    color: var(--woo-info-color, #0066cc);
+}
+
+.wchd-loading {
+    color: var(--text-muted, #666);
+    font-style: italic;
+}
+
+/* Delivery Calendar - Blocksy Enhanced */
+.wchd-calendar-wrapper {
+    background: var(--card-bg, #fff);
+    border: 1px solid var(--border-color, #ddd);
+    border-radius: var(--border-radius, 5px);
+    padding: 20px;
+    margin-bottom: 20px;
+    max-width: 100%;
+    box-shadow: var(--box-shadow-sm, 0 1px 3px rgba(0,0,0,0.1));
+}
+
+@media (min-width: 768px) {
+    .wchd-calendar-wrapper {
+        max-width: 400px;
+    }
+}
+
+.wchd-calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid var(--border-color, #eee);
+}
+
+.wchd-cal-month {
+    font-weight: var(--heading-font-weight, 600);
+    font-size: 18px;
+    color: var(--heading-color, #333);
+    font-family: var(--heading-font-family, inherit);
+}
+
+.wchd-cal-prev,
+.wchd-cal-next {
+    background: var(--button-secondary-bg, #f5f5f5);
+    border: 1px solid var(--button-secondary-border, #ddd);
+    padding: 8px 15px;
+    cursor: pointer;
+    border-radius: var(--border-radius, 3px);
+    font-size: 16px;
+    line-height: 1;
+    transition: var(--transition, all 0.2s);
+    color: var(--text-color, #333);
+}
+
+.wchd-cal-prev:hover,
+.wchd-cal-next:hover {
+    background: var(--button-secondary-hover-bg, #e0e0e0);
+    border-color: var(--button-secondary-hover-border, #ccc);
+}
+
+.wchd-calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+}
+
+.wchd-cal-day-header {
+    text-align: center;
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--text-muted, #666);
+    padding: 8px 5px;
+}
+
+.wchd-cal-days {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+}
+
+.wchd-cal-day {
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border-color, #eee);
+    border-radius: var(--border-radius, 3px);
+    cursor: default;
+    font-size: 14px;
+    transition: var(--transition, all 0.2s);
+    background: var(--card-bg, #fff);
+}
+
+.wchd-cal-empty {
+    border: none;
+    background: transparent;
+}
+
+.wchd-cal-available {
+    background: var(--primary-color-10, #f0f8ff);
+    border-color: var(--primary-color-30, #b3d9ff);
+    cursor: pointer;
+    font-weight: 500;
+    color: var(--primary-color, #0066cc);
+}
+
+.wchd-cal-available:hover {
+    background: var(--primary-color-20, #e6f4ff);
+    border-color: var(--primary-color, #0066cc);
+    transform: scale(1.05);
+    box-shadow: var(--box-shadow-sm, 0 2px 4px rgba(0,0,0,0.1));
+}
+
+.wchd-cal-unavailable {
+    color: var(--text-disabled, #ccc);
+    background: var(--bg-muted, #fafafa);
+    position: relative;
+}
+
+.wchd-cal-unavailable.wchd-cal-tomorrow {
+    background: #fff5f5;
+    color: #999;
+}
+
+.wchd-cal-unavailable.wchd-cal-tomorrow::after {
+    content: "Past cutoff";
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--tooltip-bg, #333);
+    color: var(--tooltip-color, white);
+    padding: 6px 10px;
+    border-radius: var(--border-radius, 3px);
+    font-size: 11px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+    z-index: 10;
+}
+
+.wchd-cal-unavailable.wchd-cal-tomorrow:hover::after {
+    opacity: 1;
+}
+
+.wchd-cal-past {
+    color: var(--text-disabled, #ccc);
+    background: var(--bg-muted, #fafafa);
+    text-decoration: line-through;
+}
+
+.wchd-cal-selected {
+    background: var(--primary-color, #0066cc) !important;
+    color: white !important;
+    border-color: var(--primary-color-dark, #0052a3) !important;
+    font-weight: 600;
+    box-shadow: var(--box-shadow, 0 2px 4px rgba(0,0,0,0.2));
+}
+
+.selected-date-display {
+    margin: 20px 0;
+    padding: 15px 20px;
+    background: var(--success-bg, #e8f5e9);
+    border: 1px solid var(--success-border, #4caf50);
+    border-radius: var(--border-radius, 3px);
+    color: var(--success-color, #2e7d32);
+    font-size: var(--base-font-size, 14px);
+}
+
+.selected-date-display strong {
+    color: var(--success-color-dark, #1b5e20);
+}
+
+/* Delivery Info - Blocksy Card Style */
+.wchd-delivery-info {
+    background: var(--card-bg, #fff);
+    border: 1px solid var(--border-color, #ddd);
+    padding: 20px;
+    margin-top: 20px;
+    border-radius: var(--border-radius, 3px);
+    box-shadow: var(--box-shadow-sm, 0 1px 3px rgba(0,0,0,0.1));
+}
+
+.wchd-delivery-info p {
+    margin: 10px 0;
+    font-size: var(--base-font-size, 14px);
+    line-height: 1.6;
+    color: var(--text-color, #333);
+}
+
+.wchd-delivery-info p strong {
+    color: var(--heading-color, #333);
+    font-weight: 600;
+}
+
+.wchd-cutoff-status {
+    background: var(--warning-bg, #fff3cd);
+    border: 1px solid var(--warning-border, #ffeaa7);
+    padding: 15px;
+    margin-top: 15px;
+    border-radius: var(--border-radius, 3px);
+    color: var(--warning-color, #856404);
+}
+
+.wchd-cutoff-status em {
+    font-style: normal;
+    color: var(--warning-color-dark, #721c24);
+    font-weight: 500;
+}
+
+.wchd-instructions {
+    margin-top: 20px !important;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-color, #eee);
+    font-style: italic;
+    color: var(--text-muted, #666);
+}
+
+/* Blocksy Dark Mode Support */
+[data-theme="dark"] .wchd-calendar-wrapper {
+    background: var(--card-bg, #1a1a1a);
+    border-color: var(--border-color, #333);
+}
+
+[data-theme="dark"] .wchd-cal-day {
+    background: var(--card-bg, #2a2a2a);
+    border-color: var(--border-color, #333);
+}
+
+[data-theme="dark"] .wchd-cal-available {
+    background: rgba(0, 102, 204, 0.2);
+    border-color: rgba(0, 102, 204, 0.5);
+}
+
+[data-theme="dark"] .wchd-cal-selected {
+    background: var(--primary-color, #0066cc) !important;
+}
+
+/* Responsive - Mobile First */
+@media screen and (max-width: 768px) {
+    .home-delivery-wrapper {
+        padding: 20px 15px;
+        margin: 20px -15px;
+    }
+    
+    .wchd-calendar-wrapper {
+        padding: 15px;
+    }
+    
+    .wchd-cal-day {
+        font-size: 12px;
+    }
+    
+    .wchd-calendar-grid {
+        gap: 4px;
+    }
+    
+    .wchd-cal-days {
+        gap: 4px;
+    }
+    
+    .wchd-cal-prev,
+    .wchd-cal-next {
+        padding: 6px 12px;
+        font-size: 14px;
+    }
+}
+
+/* Blocksy Checkout Specific */
+.blocksy-woo-checkout #home_delivery_fields {
+    order: 10; /* Place after other checkout fields */
+}
+
+/* Loading State */
+#check_postcode:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Focus States for Accessibility */
+.wchd-cal-available:focus {
+    outline: 2px solid var(--primary-color, #0066cc);
+    outline-offset: 2px;
+}
+
+.wchd-cal-prev:focus,
+.wchd-cal-next:focus {
+    outline: 2px solid var(--primary-color, #0066cc);
+    outline-offset: 2px;
+}
+
+/* Animation for smooth transitions */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+#delivery_date_selector {
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* Print Styles */
+@media print {
+    .wchd-calendar-wrapper {
+        border: 2px solid #000;
+    }
+    
+    .wchd-cal-selected {
+        background: #000 !important;
+        color: #fff !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+}

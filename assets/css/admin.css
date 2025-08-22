@@ -1,0 +1,67 @@
+/**
+ * Admin CSS
+ * File: assets/css/admin.css
+ */
+
+/* Delivery Date Column */
+.column-hds_delivery_date {
+    width: 140px;
+}
+
+/* Edit Button */
+.wchd-edit-date {
+    text-decoration: none;
+    font-size: 14px;
+    opacity: 0.3;
+    transition: opacity 0.2s;
+    margin-left: 5px;
+}
+
+.wchd-delivery-date-cell:hover .wchd-edit-date {
+    opacity: 1;
+}
+
+.wchd-edit-date:hover {
+    opacity: 1 !important;
+}
+
+/* Edit Form */
+.wchd-date-edit-form {
+    margin-top: 5px;
+}
+
+.wchd-date-input {
+    width: 120px;
+    margin-bottom: 5px;
+    font-size: 13px;
+}
+
+.wchd-date-edit-form .button {
+    margin-right: 5px;
+    padding: 2px 8px;
+    font-size: 12px;
+    height: auto;
+}
+
+/* Success animation */
+.wchd-delivery-date-cell {
+    transition: background-color 0.3s ease;
+}
+
+/* Mobile responsive */
+@media screen and (max-width: 782px) {
+    .column-hds_delivery_date {
+        width: auto;
+    }
+    
+    .wchd-date-input {
+        width: 100%;
+    }
+}
+
+/* High contrast mode */
+@media screen and (prefers-contrast: high) {
+    .wchd-edit-date {
+        opacity: 1;
+    }
+}
