@@ -3,7 +3,7 @@
  * Plugin Name: WooCommerce Home Delivery Date
  * Plugin URI: https://bulletmarketing.com.au/
  * Description: Integrates Home Delivery API to check postcodes and display delivery dates for Victoria, Australia
- * Version: 1.1.5
+ * Version: 1.1.6
  * Author: Bullet Marketing
  * Author URI: https://bulletmarketing.com.au/
  * License: GPL v2 or later
