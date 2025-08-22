@@ -343,12 +343,6 @@ jQuery(document).ready(function($) {
             var infoHtml = '<div class="wchd-delivery-info">';
             infoHtml += '<p><strong>Delivery Zone:</strong> ' + data.zone + '</p>';
             infoHtml += '<p><strong>Order Cutoff:</strong> Orders must be placed by ' + data.cutoff_time + ' the day before delivery.</p>';
-            
-            if (data.cutoff_status) {
-                infoHtml += '<p class="wchd-cutoff-status"><strong>Current Time:</strong> ' + data.current_time + '<br>';
-                infoHtml += '<em>' + data.cutoff_status + '</em></p>';
-            }
-            
             infoHtml += '</div>';
             
             $info.html(infoHtml);
