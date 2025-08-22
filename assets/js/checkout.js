@@ -10,6 +10,8 @@ jQuery(document).ready(function($) {
     var lastCheckedPostcode = '';
     var lastCheckedSuburb = '';
     var isChecking = false;
+    var pendingCheck = false;
+    var validationInProgress = false;
     
     // Initialize on page load
     init();
@@ -45,7 +47,9 @@ jQuery(document).ready(function($) {
         
         // Check if ship to different address is checked
         $('#ship-to-different-address-checkbox').on('change', function() {
-            checkPostcodeAndSuburb();
+            setTimeout(function() {
+                checkPostcodeAndSuburb();
+            }, 100);
         });
         
         // Track when address fields change after initial load
@@ -59,27 +63,77 @@ jQuery(document).ready(function($) {
             }
         });
         
+        // Prevent form submission while checking
+        $('form.checkout').on('submit', function(e) {
+            if (isChecking || validationInProgress) {
+                e.preventDefault();
+                showMessage('info', 'Please wait while we verify your delivery area...');
+                
+                // Try again after a short delay
+                setTimeout(function() {
+                    if (!isChecking && !validationInProgress) {
+                        $('form.checkout').submit();
+                    }
+                }, 1000);
+                
+                return false;
+            }
+            
+            // Final validation before submission
+            var currentData = getCurrentPostcodeAndSuburb();
+            if (currentData.postcode && $('#is_serviceable').val() !== '1') {
+                e.preventDefault();
+                showMessage('error', 'Please wait for postcode verification to complete.');
+                
+                // Force a check and retry
+                checkPostcodeAndSuburb(function() {
+                    setTimeout(function() {
+                        $('form.checkout').submit();
+                    }, 500);
+                });
+                
+                return false;
+            }
+        });
+        
         // Initial check if postcode already exists
-        checkPostcodeAndSuburb();
+        setTimeout(function() {
+            checkPostcodeAndSuburb();
+        }, 500);
     }
     
     // Bind listeners to postcode and suburb fields
     function bindPostcodeListeners() {
-        // Billing fields
-        $('#billing_postcode, #billing_city').on('change keyup', function() {
+        // Billing fields - increased delay for fast typers
+        $('#billing_postcode, #billing_city').on('input keyup change', function() {
             clearTimeout(checkTimeout);
-            checkTimeout = setTimeout(checkPostcodeAndSuburb, 500);
+            pendingCheck = true;
+            checkTimeout = setTimeout(function() {
+                if (pendingCheck) {
+                    checkPostcodeAndSuburb();
+                    pendingCheck = false;
+                }
+            }, 800); // Increased from 500ms to 800ms
         });
         
         // Shipping fields
-        $('#shipping_postcode, #shipping_city').on('change keyup', function() {
+        $('#shipping_postcode, #shipping_city').on('input keyup change', function() {
             clearTimeout(checkTimeout);
-            checkTimeout = setTimeout(checkPostcodeAndSuburb, 500);
+            pendingCheck = true;
+            checkTimeout = setTimeout(function() {
+                if (pendingCheck) {
+                    checkPostcodeAndSuburb();
+                    pendingCheck = false;
+                }
+            }, 800);
         });
         
-        // State changes
+        // State changes - immediate check
         $('#billing_state, #shipping_state').on('change', function() {
-            checkPostcodeAndSuburb();
+            clearTimeout(checkTimeout);
+            setTimeout(function() {
+                checkPostcodeAndSuburb();
+            }, 100);
         });
     }
     
@@ -105,18 +159,28 @@ jQuery(document).ready(function($) {
         };
     }
     
-    // Check postcode and suburb
-    function checkPostcodeAndSuburb() {
+    // Check postcode and suburb with callback support
+    function checkPostcodeAndSuburb(callback) {
         var data = getCurrentPostcodeAndSuburb();
         
         // Don't check if already checking
         if (isChecking) {
+            if (callback) {
+                // Wait for current check to complete
+                var waitForCheck = setInterval(function() {
+                    if (!isChecking) {
+                        clearInterval(waitForCheck);
+                        callback();
+                    }
+                }, 100);
+            }
             return;
         }
         
         // Don't check if no postcode
         if (!data.postcode || data.postcode.length !== 4) {
             hideDeliveryOptions();
+            if (callback) callback();
             return;
         }
         
@@ -126,11 +190,12 @@ jQuery(document).ready(function($) {
             trackIssue('not_serviceable', {
                 error_message: 'Non-Victoria state selected: ' + data.state
             });
+            if (callback) callback();
             return;
         }
         
-        // Don't re-check the same postcode/suburb combination
-        if (data.postcode === lastCheckedPostcode && data.suburb === lastCheckedSuburb) {
+        // Don't re-check the same postcode/suburb combination unless forced
+        if (data.postcode === lastCheckedPostcode && data.suburb === lastCheckedSuburb && !callback) {
             return;
         }
         
@@ -141,6 +206,7 @@ jQuery(document).ready(function($) {
             trackIssue('not_serviceable', {
                 error_message: 'Invalid postcode range: ' + data.postcode
             });
+            if (callback) callback();
             return;
         }
         
@@ -151,6 +217,7 @@ jQuery(document).ready(function($) {
         // Show checking message
         showMessage('info', 'Checking delivery availability...');
         isChecking = true;
+        validationInProgress = true;
         
         // Check serviceability
         $.ajax({
@@ -162,8 +229,10 @@ jQuery(document).ready(function($) {
                 suburb: data.suburb,
                 nonce: wchd_ajax.nonce
             },
+            timeout: 10000, // 10 second timeout
             success: function(response) {
                 isChecking = false;
+                validationInProgress = false;
                 
                 if (response.success) {
                     if (response.data.require_suburb) {
@@ -172,7 +241,8 @@ jQuery(document).ready(function($) {
                         hideDeliveryOptions();
                     } else {
                         // Serviceable - get delivery dates
-                        handleServiceableResponse(response.data);
+                        handleServiceableResponse(response.data, callback);
+                        return; // Don't call callback here, it's called in handleServiceableResponse
                     }
                 } else {
                     showNotServiceableMessage(response.data.message);
@@ -180,19 +250,24 @@ jQuery(document).ready(function($) {
                         error_message: response.data.message
                     });
                 }
+                
+                if (callback) callback();
             },
             error: function(xhr, status, error) {
                 isChecking = false;
+                validationInProgress = false;
                 showMessage('error', 'Unable to check delivery availability. Please try again.');
                 trackIssue('postcode_check_failed', {
-                    error_message: 'AJAX error: ' + error
+                    error_message: 'AJAX error: ' + error + ' Status: ' + status
                 });
+                
+                if (callback) callback();
             }
         });
     }
     
     // Handle serviceable response
-    function handleServiceableResponse(data) {
+    function handleServiceableResponse(data, callback) {
         // Store zone info
         $('#delivery_zone').val(data.zone);
         $('#delivery_depot').val(data.depot);
@@ -218,11 +293,11 @@ jQuery(document).ready(function($) {
         }
         
         // Get delivery dates
-        getDeliveryDates();
+        getDeliveryDates(callback);
     }
     
-    // Get delivery dates
-    function getDeliveryDates() {
+    // Get delivery dates with callback support
+    function getDeliveryDates(callback) {
         $.ajax({
             url: wchd_ajax.ajax_url,
             type: 'POST',
@@ -230,6 +305,7 @@ jQuery(document).ready(function($) {
                 action: 'get_delivery_dates',
                 nonce: wchd_ajax.nonce
             },
+            timeout: 10000,
             success: function(response) {
                 if (response.success) {
                     populateDeliveryDates(response.data);
@@ -241,12 +317,16 @@ jQuery(document).ready(function($) {
                         error_message: response.data.message
                     });
                 }
+                
+                if (callback) callback();
             },
             error: function(xhr, status, error) {
                 showMessage('error', 'Unable to load delivery dates. Please refresh the page and try again.');
                 trackIssue('api_error', {
                     error_message: 'Failed to get delivery dates: ' + error
                 });
+                
+                if (callback) callback();
             }
         });
     }
@@ -475,10 +555,15 @@ jQuery(document).ready(function($) {
         }
     });
     
-    // Listen for checkout updates
+    // Listen for checkout updates - preserve our validation state
     $(document.body).on('updated_checkout', function() {
-        // Re-check postcode after checkout update
-        checkPostcodeAndSuburb();
+        // Don't re-check immediately after checkout update to avoid race conditions
+        setTimeout(function() {
+            var currentData = getCurrentPostcodeAndSuburb();
+            if (currentData.postcode && $('#is_serviceable').val() !== '1') {
+                checkPostcodeAndSuburb();
+            }
+        }, 1000);
     });
     
     // Track checkout validation failures
