@@ -3,7 +3,7 @@
  * Plugin Name: WooCommerce Home Delivery Date
  * Plugin URI: https://yourwebsite.com
  * Description: Adds home delivery date selection to WooCommerce checkout with API integration for postcode validation and delivery scheduling.
- * Version: 1.0.2
+ * Version: 1.1.5
  * Author: Your Name
  * Author URI: https://yourwebsite.com
  * Text Domain: woocommerce-home-delivery-date
@@ -22,7 +22,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('WCHD_VERSION', '1.0.2');
+define('WCHD_VERSION', '1.1.5');
 define('WCHD_PLUGIN_FILE', __FILE__);
 define('WCHD_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('WCHD_PLUGIN_URL', plugin_dir_url(__FILE__));
