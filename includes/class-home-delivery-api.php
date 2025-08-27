@@ -24,58 +24,43 @@ class WCHD_Home_Delivery_API {
     
     private function __construct() {
         $settings = get_option('wchd_settings', array());
-        $this->api_endpoint = isset($settings['api_endpoint']) ? rtrim($settings['api_endpoint'], '/') : 'https://api.homedelivery.com.au';
+        $this->api_endpoint = isset($settings['api_endpoint']) ? rtrim($settings['api_endpoint'], '/') : '';
         $this->api_key = isset($settings['api_key']) ? $settings['api_key'] : '';
         $this->enable_logging = isset($settings['enable_logging']) ? $settings['enable_logging'] : false;
     }
     
-    /**
-     * Check if postcode is serviceable
-     */
     public function check_postcode_serviceability($postcode, $suburb = '') {
         if (empty($this->api_endpoint) || empty($this->api_key)) {
             return new WP_Error('api_not_configured', 'API endpoint or key not configured');
         }
         
-        // Clean postcode
         $postcode = preg_replace('/[^0-9]/', '', $postcode);
         
         if (empty($postcode)) {
             return new WP_Error('invalid_postcode', 'Invalid postcode format');
         }
         
-        // First, get available suburbs for this postcode
         $suburbs_response = $this->get_postcode_suburbs($postcode);
         
         if (is_wp_error($suburbs_response)) {
             return $suburbs_response;
         }
         
-        // If no suburb provided, return the list of available suburbs
         if (empty($suburb)) {
             return array(
                 'require_suburb' => true,
                 'postcode' => $postcode,
-                'suburbs' => isset($suburbs_response['suburbs']) ? $suburbs_response['suburbs'] : array()
+                'suburbs' => $suburbs_response['suburbs']
             );
         }
         
-        // Clean suburb name
         $suburb = strtoupper(trim($suburb));
-        
-        // Check if the provided suburb is in the list of available suburbs
-        $available_suburbs = array();
-        if (isset($suburbs_response['suburbs']) && is_array($suburbs_response['suburbs'])) {
-            $available_suburbs = array_map('strtoupper', $suburbs_response['suburbs']);
-        }
-        
+        $available_suburbs = array_map('strtoupper', $suburbs_response['suburbs']);
         $matched_suburb = null;
         
-        // Try exact match first
         if (in_array($suburb, $available_suburbs)) {
             $matched_suburb = $suburb;
         } else {
-            // Try partial match
             foreach ($available_suburbs as $available_suburb) {
                 if (strpos($available_suburb, $suburb) !== false || strpos($suburb, $available_suburb) !== false) {
                     $matched_suburb = $available_suburb;
@@ -85,17 +70,16 @@ class WCHD_Home_Delivery_API {
         }
         
         if (!$matched_suburb) {
-            return new WP_Error('suburb_not_found', 'Suburb not found for this postcode');
+            return new WP_Error('suburb_not_found', 'Suburb not found for this postcode. Available suburbs: ' . implode(', ', $suburbs_response['suburbs']));
         }
         
-        // Now check if this specific suburb/postcode combination is serviceable
         $serviceable_response = $this->check_suburb_serviceable($matched_suburb, $postcode);
         
         if (is_wp_error($serviceable_response)) {
             return $serviceable_response;
         }
         
-        if (!isset($serviceable_response['is_serviceable']) || !$serviceable_response['is_serviceable']) {
+        if (!$serviceable_response['is_serviceable']) {
             return new WP_Error('not_serviceable', 'This area is not currently serviceable');
         }
         
@@ -104,14 +88,13 @@ class WCHD_Home_Delivery_API {
             'postcode' => $postcode,
             'suburb' => $suburb,
             'matched_suburb' => $matched_suburb,
-            'zone' => isset($serviceable_response['zone']) ? $serviceable_response['zone'] : '',
-            'depot' => isset($serviceable_response['depot']) ? $serviceable_response['depot'] : ''
+            'zone' => $serviceable_response['zone'],
+            'zone_code' => $serviceable_response['zoneCode'],
+            'depot' => $serviceable_response['depot'],
+            'depot_state' => $serviceable_response['depotState']
         );
     }
     
-    /**
-     * Get available suburbs for a postcode
-     */
     private function get_postcode_suburbs($postcode) {
         $url = $this->api_endpoint . '/api/serviceable/postcode/' . $postcode;
         
@@ -121,12 +104,13 @@ class WCHD_Home_Delivery_API {
             return $response;
         }
         
+        if (!isset($response['suburbs']) || !is_array($response['suburbs'])) {
+            return new WP_Error('invalid_response', 'Invalid API response format');
+        }
+        
         return $response;
     }
     
-    /**
-     * Check if specific suburb/postcode is serviceable
-     */
     private function check_suburb_serviceable($suburb, $postcode) {
         $url = $this->api_endpoint . '/api/serviceable?' . http_build_query(array(
             'suburb' => $suburb,
@@ -142,10 +126,7 @@ class WCHD_Home_Delivery_API {
         return $response;
     }
     
-    /**
-     * Get delivery dates
-     */
-    public function get_delivery_dates($suburb = '', $postcode = '') {
+    public function get_delivery_dates($suburb = '', $postcode = '', $weeks = 2) {
         if (empty($this->api_endpoint) || empty($this->api_key)) {
             return new WP_Error('api_not_configured', 'API endpoint or key not configured');
         }
@@ -157,7 +138,7 @@ class WCHD_Home_Delivery_API {
         $url = $this->api_endpoint . '/api/serviceable/service-days?' . http_build_query(array(
             'suburb' => strtoupper($suburb),
             'postcode' => $postcode,
-            'weeksToShow' => 2
+            'weeksToShow' => $weeks
         ));
         
         $response = $this->make_api_request($url);
@@ -169,40 +150,75 @@ class WCHD_Home_Delivery_API {
         return $this->process_delivery_dates($response);
     }
     
-    /**
-     * Process delivery dates
-     */
     private function process_delivery_dates($api_response) {
         if (!isset($api_response['days']) || !is_array($api_response['days'])) {
             return new WP_Error('invalid_response', 'No delivery days found in API response');
         }
         
         $delivery_dates = array();
+        $cutoff_time = isset($api_response['cutoffTime']) ? $api_response['cutoffTime'] : '12:00:00';
+        $cutoff_days = isset($api_response['cutoffDays']) ? intval($api_response['cutoffDays']) : 1;
+        
+        try {
+            $timezone = new DateTimeZone('Australia/Melbourne');
+            $now = new DateTime('now', $timezone);
+        } catch (Exception $e) {
+            $timezone = null;
+            $now = new DateTime();
+        }
         
         foreach ($api_response['days'] as $day) {
             if (!isset($day['nextDeliveryDate']) || empty($day['nextDeliveryDate'])) {
                 continue;
             }
             
-            $delivery_dates[] = array(
-                'date' => date('Y-m-d', strtotime($day['nextDeliveryDate'])),
-                'display' => date('l, F j, Y', strtotime($day['nextDeliveryDate'])),
-                'day' => isset($day['day']) ? $day['day'] : ''
-            );
+            try {
+                if ($timezone) {
+                    $delivery_date = new DateTime($day['nextDeliveryDate'], $timezone);
+                } else {
+                    $delivery_date = new DateTime($day['nextDeliveryDate']);
+                }
+                
+                $cutoff_date = clone $delivery_date;
+                $cutoff_date->modify('-' . $cutoff_days . ' days');
+                
+                $time_parts = explode(':', $cutoff_time);
+                $cutoff_date->setTime(
+                    intval($time_parts[0]),
+                    intval($time_parts[1]),
+                    isset($time_parts[2]) ? intval($time_parts[2]) : 0
+                );
+                
+                if ($now > $cutoff_date) {
+                    continue;
+                }
+                
+                $delivery_dates[] = array(
+                    'date' => $delivery_date->format('Y-m-d'),
+                    'display' => $delivery_date->format('l, F j, Y'),
+                    'day' => $day['day'],
+                    'deliveries_count' => isset($day['deliveriesCount']) ? $day['deliveriesCount'] : 0
+                );
+            } catch (Exception $e) {
+                continue;
+            }
         }
+        
+        usort($delivery_dates, function($a, $b) {
+            return strcmp($a['date'], $b['date']);
+        });
         
         return array(
             'zone' => isset($api_response['zone']) ? $api_response['zone'] : '',
+            'zone_code' => isset($api_response['zoneCode']) ? $api_response['zoneCode'] : '',
             'depot' => isset($api_response['depot']) ? $api_response['depot'] : '',
-            'cutoff_time' => isset($api_response['cutoffTime']) ? $api_response['cutoffTime'] : '12:00',
+            'cutoff_time' => $cutoff_time,
+            'cutoff_days' => $cutoff_days,
             'dates' => $delivery_dates
         );
     }
     
-    /**
-     * Make API request
-     */
-    private function make_api_request($url, $method = 'GET') {
+    private function make_api_request($url, $method = 'GET', $body = null) {
         $args = array(
             'method' => $method,
             'headers' => array(
@@ -213,31 +229,36 @@ class WCHD_Home_Delivery_API {
             'timeout' => 30
         );
         
-        if ($this->enable_logging) {
-            error_log('[WCHD API] Request: ' . $method . ' ' . $url);
+        if ($body && $method !== 'GET') {
+            $args['body'] = is_array($body) ? json_encode($body) : $body;
         }
+        
+        $this->log('API Request: ' . $method . ' ' . $url);
         
         $response = wp_remote_request($url, $args);
         
         if (is_wp_error($response)) {
-            if ($this->enable_logging) {
-                error_log('[WCHD API] Error: ' . $response->get_error_message());
-            }
+            $this->log('API Error: ' . $response->get_error_message());
             return new WP_Error('api_request_failed', 'API request failed: ' . $response->get_error_message());
         }
         
         $status_code = wp_remote_retrieve_response_code($response);
         $body = wp_remote_retrieve_body($response);
         
-        if ($this->enable_logging) {
-            error_log('[WCHD API] Response: ' . $status_code . ' - ' . $body);
-        }
+        $this->log('API Response: ' . $status_code . ' - ' . $body);
         
         if ($status_code === 401) {
             return new WP_Error('unauthorized', 'API authentication failed. Please check your API key.');
         }
         
         if ($status_code >= 400) {
+            $decoded = json_decode($body, true);
+            if (isset($decoded['errors']) && is_array($decoded['errors'])) {
+                $error_message = isset($decoded['errors'][0]['displayMessage']) 
+                    ? $decoded['errors'][0]['displayMessage'] 
+                    : 'API request failed';
+                return new WP_Error('api_error', $error_message);
+            }
             return new WP_Error('api_error', 'API request failed with status: ' . $status_code);
         }
         
@@ -250,15 +271,19 @@ class WCHD_Home_Delivery_API {
         return $decoded;
     }
     
-    /**
-     * Test API connection
-     */
+    private function log($message) {
+        if (!$this->enable_logging) {
+            return;
+        }
+        
+        error_log('[WCHD API] ' . $message);
+    }
+    
     public function test_connection() {
         if (empty($this->api_endpoint) || empty($this->api_key)) {
             return new WP_Error('api_not_configured', 'API endpoint or key not configured');
         }
         
-        // Test with a known postcode
         $response = $this->get_postcode_suburbs('3000');
         
         if (is_wp_error($response)) {
