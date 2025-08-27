@@ -149,7 +149,6 @@ class WCHD_Checkout_Fields {
             $postcodeInt = intval($postcode);
             if (($postcodeInt >= 3000 && $postcodeInt <= 3999) || ($postcodeInt >= 8000 && $postcodeInt <= 8999)) {
                 // Valid Victoria postcode - allow checkout to proceed
-                // Don't require serviceability check to be completed
                 return;
             }
         }
@@ -323,11 +322,15 @@ class WCHD_Checkout_Fields {
             wp_send_json_error(array('message' => 'Security check failed'));
         }
         
+        // Get suburb and postcode from session or previous check
+        $suburb = isset($_POST['suburb']) ? sanitize_text_field($_POST['suburb']) : '';
+        $postcode = isset($_POST['postcode']) ? sanitize_text_field($_POST['postcode']) : '';
+        
         // Get API instance
         $api = WCHD_Home_Delivery_API::get_instance();
         
         // Get delivery dates
-        $result = $api->get_delivery_dates();
+        $result = $api->get_delivery_dates($suburb, $postcode);
         
         if (is_wp_error($result)) {
             wp_send_json_error(array('message' => $result->get_error_message()));
