@@ -81,7 +81,7 @@ class WCHD_Checkout_Fields {
             'delivery_date' => array(
                 'type' => 'hidden',
                 'default' => '',
-                'required' => false, // Changed from true to false
+                'required' => false,
             ),
         );
         
@@ -121,16 +121,46 @@ class WCHD_Checkout_Fields {
             return;
         }
         
-        $is_serviceable = isset($_POST['is_serviceable']) ? sanitize_text_field($_POST['is_serviceable']) : '0';
+        // Get address data to check if we have a valid postcode
+        $ship_to_different = isset($_POST['ship_to_different_address']) ? true : false;
         
-        // Check if postcode is serviceable
-        if ($is_serviceable !== '1') {
-            wc_add_notice(__('Please check your postcode first to ensure we deliver to your area.', 'woocommerce-home-delivery-date'), 'error');
+        if ($ship_to_different) {
+            $postcode = isset($_POST['shipping_postcode']) ? sanitize_text_field($_POST['shipping_postcode']) : '';
+            $suburb = isset($_POST['shipping_city']) ? sanitize_text_field($_POST['shipping_city']) : '';
+            $state = isset($_POST['shipping_state']) ? sanitize_text_field($_POST['shipping_state']) : '';
+        } else {
+            $postcode = isset($_POST['billing_postcode']) ? sanitize_text_field($_POST['billing_postcode']) : '';
+            $suburb = isset($_POST['billing_city']) ? sanitize_text_field($_POST['billing_city']) : '';
+            $state = isset($_POST['billing_state']) ? sanitize_text_field($_POST['billing_state']) : '';
+        }
+        
+        // If no postcode, skip validation
+        if (empty($postcode)) {
             return;
         }
         
-        // Delivery date is no longer required - removed validation
-        // Users can now proceed without selecting a delivery date
+        // If not Victoria, skip validation
+        if (!empty($state) && $state !== 'VIC') {
+            return;
+        }
+        
+        // Validate Victoria postcode format
+        if (strlen($postcode) === 4 && is_numeric($postcode)) {
+            $postcodeInt = intval($postcode);
+            if (($postcodeInt >= 3000 && $postcodeInt <= 3999) || ($postcodeInt >= 8000 && $postcodeInt <= 8999)) {
+                // Valid Victoria postcode - allow checkout to proceed
+                // Don't require serviceability check to be completed
+                return;
+            }
+        }
+        
+        // Only show error if they have an invalid postcode format
+        if (!empty($postcode) && strlen($postcode) === 4 && is_numeric($postcode)) {
+            $postcodeInt = intval($postcode);
+            if (!(($postcodeInt >= 3000 && $postcodeInt <= 3999) || ($postcodeInt >= 8000 && $postcodeInt <= 8999))) {
+                wc_add_notice(__('Sorry, we only deliver to Victoria postcodes (3000-3999, 8000-8999).', 'woocommerce-home-delivery-date'), 'error');
+            }
+        }
     }
     
     /**
@@ -162,6 +192,24 @@ class WCHD_Checkout_Fields {
                     $order->update_meta_data($meta_key, $value);
                 }
             }
+        }
+        
+        // Also save the actual address data used
+        $ship_to_different = isset($_POST['ship_to_different_address']) ? true : false;
+        
+        if ($ship_to_different) {
+            $postcode = isset($_POST['shipping_postcode']) ? sanitize_text_field($_POST['shipping_postcode']) : '';
+            $suburb = isset($_POST['shipping_city']) ? sanitize_text_field($_POST['shipping_city']) : '';
+        } else {
+            $postcode = isset($_POST['billing_postcode']) ? sanitize_text_field($_POST['billing_postcode']) : '';
+            $suburb = isset($_POST['billing_city']) ? sanitize_text_field($_POST['billing_city']) : '';
+        }
+        
+        if (!empty($postcode)) {
+            $order->update_meta_data('_delivery_postcode', $postcode);
+        }
+        if (!empty($suburb)) {
+            $order->update_meta_data('_delivery_suburb', $suburb);
         }
         
         $order->save();
